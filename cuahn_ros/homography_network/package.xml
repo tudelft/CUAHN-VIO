@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>HomographyNet</name>
+  <version>1.0.0</version>
+  <description>The HomographyNet package</description>
+  <maintainer email="yingfu.xu.94@gmail.com">Yingfu Xu</maintainer>
+  <license>GPLv3</license>
+
+  <depend>roscpp</depend>
+  <build_depend>cmake_modules</build_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+  </export>
+</package>

@@ -1,0 +1,125 @@
+<launch>
+
+    <!-- mono or stereo and what ros bag to play -->
+    <arg name="max_cameras" default="1" />
+    <arg name="use_stereo"  default="false" />
+    <arg name="bag_start"   default="0.0" />
+    <arg name="bag_durr"    default="9999999" />
+    <arg name="dataset"     default="indoor_45_2_snapdragon_with_gt" /> <!-- 2, 3, 9, 12, 13, 14 -->
+    <arg name="bag"         default="/home/adr/datasets/UZHFPV/$(arg dataset)/$(arg dataset).bag" />
+    <arg name="bag_gt"      default="$(find ov_data)/uzh_fpv/$(arg dataset).txt" />
+
+    <!-- what configuration mode we are in  -->
+    <!-- 1: indoor 45 degree downward facing  -->
+    <!-- 3: outdoor 45 degree downward facing  -->
+    <arg name="sensor_config"   default="1" />
+
+    <!-- imu starting thresholds -->
+    <arg name="init_window_time"  default="1.0" />
+    <arg name="init_imu_thresh"   default="0.5" />
+
+    <!-- saving trajectory path and timing information -->
+    <arg name="dosave"      default="true" />
+    <arg name="dotime"      default="true" />
+    <arg name="path_est"    default="$(find ov_data)/uzh_fpv/stamped_traj_estimate.txt" />
+    <arg name="path_time"   default="$(find ov_data)/uzh_fpv/traj_timing.txt" />
+
+    <!-- MASTER NODE! -->
+    <node name="run_subscribe_cuahn" pkg="cuahn" type="run_subscribe_cuahn" output="screen" clear_params="true" required="true">
+
+        <!-- bag topics -->
+        <param name="topic_imu"      type="string" value="/snappy_imu" />
+        <param name="topic_camera0"  type="string" value="/snappy_cam/stereo_l" />
+        <param name="topic_camera1"  type="string" value="/snappy_cam/stereo_r" />
+
+        <!-- world/filter parameters -->
+        <param name="use_fej"                type="bool"   value="false" />
+        <param name="use_imuavg"             type="bool"   value="true" />
+        <param name="use_rk4int"             type="bool"   value="false" />
+        <param name="use_stereo"             type="bool"   value="$(arg use_stereo)" />
+        <param name="calib_cam_extrinsics"   type="bool"   value="false" />
+        <param name="calib_cam_intrinsics"   type="bool"   value="false" />
+        <param name="calib_cam_timeoffset"   type="bool"   value="false" />
+        <param name="calib_camimu_dt"        type="double" value="-0.0148489" />
+
+        <param name="max_cameras"            type="int"    value="$(arg max_cameras)" />
+        <param name="init_window_time"       type="double" value="$(arg init_window_time)" />
+        <param name="init_imu_thresh"        type="double" value="$(arg init_imu_thresh)" />
+        <param name="gravity_mag"            type="double" value="9.81" />
+
+        <!-- timing statistics recording -->
+        <param name="record_timing_information"   type="bool"   value="$(arg dotime)" />
+        <param name="record_timing_filepath"      type="string" value="$(arg path_time)" />
+
+        <!-- tracker/extractor properties -->
+        <param name="use_network"        type="bool"   value="true" />
+        <param name="use_prior"          type="bool"   value="true" />
+        <param name="show_img"           type="bool"   value="true" /> 
+        <param name="network_model_path" type="string" value="$(find HomographyNet)/torch_script_models_laptop/traced_model_3_blocks_using_prior_showError.pt" /> 
+
+        <param name="downsample_cameras" type="bool"   value="false" /> <!-- false for CUAHN (uzhfpv needs original intrinsics for undistortion) -->
+        <param name="multi_threading"    type="bool"   value="true" />
+        <param name="histogram_method"   type="string" value="NONE" /> 
+
+        <!-- sensor noise values -->
+        <param name="up_linear_K_HNet_Cov"         type="double"   value="10.0" /> 
+        <param name="init_height"                  type="double"   value="0.1" />
+        <param name="max_IEKF_iteration"           type="int"      value="1" />
+
+        <param name="gyroscope_noise_density"      type="double"   value="0.00559017" />
+        <param name="gyroscope_random_walk"        type="double"   value="8.94427e-04" />
+        <param name="accelerometer_noise_density"  type="double"   value="0.01118034" />
+        <param name="accelerometer_random_walk"    type="double"   value="0.04472136" />
+
+        <!-- camera intrinsics -->
+        <rosparam param="cam0_wh">[640, 480]</rosparam>
+        <rosparam param="cam1_wh">[640, 480]</rosparam>
+        <param name="cam0_is_fisheye" type="bool" value="true" />
+        <param name="cam1_is_fisheye" type="bool" value="true" />
+
+        <!-- indoor 45 degree downward facing -->
+        <rosparam param="cam0_k" if="$(eval arg('sensor_config') == 1)">[275.46015578667294, 274.9948095922592, 315.958384100568, 242.7123497822731]</rosparam>
+        <rosparam param="cam0_d" if="$(eval arg('sensor_config') == 1)">[-6.545154718304953e-06, -0.010379525898159981, 0.014935312423953146, -0.005639061406567785]</rosparam>
+        <rosparam param="T_ItoCmono" if="$(eval arg('sensor_config') == 1)">
+            [
+            -0.027256691772188965, -0.9996260641688061, 0.0021919370477445077, 0.02422852666805565,
+            -0.7139206120417471, 0.017931469899155242, -0.6999970157716363, 0.008974432843748055,
+            0.6996959571525168, -0.020644471939022302, -0.714142404092339, -0.000638971731537894,
+            0.0, 0.0, 0.0, 1.0
+            ]
+        </rosparam>
+
+        <!-- outdoor 45 degree downward facing -->
+        <rosparam param="cam0_k" if="$(eval arg('sensor_config') == 3)">[275.3385453506587, 275.0852058534152, 315.7697752181792, 233.72625444124952]</rosparam>
+        <rosparam param="cam0_d" if="$(eval arg('sensor_config') == 3)">[-0.017811595366268803, 0.04897078939103475, -0.041363300782847834, 0.011440891936886532]</rosparam>
+        <rosparam param="T_C0toI" if="$(eval arg('sensor_config') == 3)">
+            [
+            -0.02404152, -0.71845273,  0.69516018,  0.02496917,
+            -0.99966408,  0.0105427,  -0.02367658,  0.01950941,
+             0.00968164, -0.69549588, -0.71846485, -0.01354663,
+            0.0, 0.0, 0.0, 1.0
+            ]
+        </rosparam>
+    </node>
+
+    <!-- play the dataset -->
+    <node pkg="rosbag" type="play" name="rosbag" args="-d 1 -s $(arg bag_start) -u $(arg bag_durr) $(arg bag)" required="true"/>
+
+    <!-- path viz of aligned gt -->
+    <node name="live_align_trajectory" pkg="ov_eval" type="live_align_trajectory" output="log" clear_params="true">
+        <param name="alignment_type" type="str" value="posyaw" />
+        <param name="path_gt"        type="str" value="$(arg bag_gt)" />
+    </node>
+
+    <!-- record the trajectory if enabled -->
+    <group if="$(arg dosave)">
+        <node name="recorder_estimate" pkg="ov_eval" type="pose_to_file" output="screen">
+            <param name="topic"      type="str" value="/cuahn/poseimu" />
+            <param name="topic_type" type="str" value="PoseWithCovarianceStamped" />
+            <param name="output"     type="str" value="$(arg path_est)" />
+        </node>
+    </group>
+
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find cuahn)/launch/display.rviz" />
+
+</launch>
