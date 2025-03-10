@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8.8)
 # Project name
 project(cuahn)
 
-# set(CMAKE_PREFIX_PATH $ENV{HOME}/libtorch) # PyTorch laptop # NOTE! Comment this line after the first (failed) catkin build attempt
+set(CMAKE_PREFIX_PATH $ENV{HOME}/libtorch) # PyTorch laptop # NOTE! Comment this line after the first (failed) catkin build attempt
 # set(CMAKE_PREFIX_PATH $ENV{HOME}/.local/lib/python3.6/site-packages/torch) # PyTorch tx2
 
 # Find catkin (the ROS build system)
